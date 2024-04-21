@@ -1,0 +1,3 @@
+z3-solver
+tensorflow==2.12.0
+aif360
