@@ -132,6 +132,7 @@ for model_file in model_files:
             else:
                 in_props.extend(in_const_adult(df, x, attr, 'eq', x_))
 
+
         in_props.extend(in_const_domain_adult(df, x, x_, p, PA))
     
         # In[]
