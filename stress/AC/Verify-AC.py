@@ -18,7 +18,7 @@ single_input = X_test[0].reshape(1, 13)
 #print_metadata(df)
 
 # In[]
-model_dir = './AC-Model/'
+model_dir = '../../models/adult/'
 result_dir = './res/sex-'
 PARTITION_THRESHOLD = 6
 

@@ -155,6 +155,7 @@ for model_file in model_files:
         if res == sat:
             m = s.model()
             inp1, inp2 = parse_z3Model(m)
+            prune_neurons_based_class_selectivity(inp1, inp2, pr_w, pr_b, layer_net)
         
         sv_time = s.statistics().time
         s_end_time = time.time()
@@ -200,6 +201,7 @@ for model_file in model_files:
             if res == sat:
                 m = s.model()
                 inp1, inp2 = parse_z3Model(m)
+                prune_neurons_based_class_selectivity(inp1, inp2, w, b, layer_net)
                 
             if res != unknown:
                 h_success = 1

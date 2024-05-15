@@ -11,6 +11,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import os.path
 from random import randrange
+import random
 from utils.standard_data import *
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
@@ -383,87 +384,6 @@ def singular_verification(cand, df, weight, bias, ranges, pl_lb, pl_ub):
 
     return dead_node_mask, candidates, count_finds / total_counts
 
-def singular_verification_class_selectivity(cand, df, weight, bias, ranges, pl_lb, pl_ub):
-    print('SINGULAR VERIFICATION WITH CLASS SELECTIVITY')
-    candidates = copy.deepcopy(cand)
-    dead_node_mask = copy.deepcopy(candidates)
-    selectivity_scores = np.zeros_like(candidates, dtype=float)  # 初始化类别选择性分数数组
-    total_counts = 0
-
-    for layer_index in range(len(candidates)):
-        if layer_index == len(candidates) - 1:
-            break
-
-        for neuron_index in range(len(candidates[layer_index])):
-            total_counts += 1
-
-            if candidates[layer_index][neuron_index] == 0:
-                continue
-
-            # 根据当前层的索引选择对应的输入变量和约束条件，并调用相应的 Z3 求解器函数
-            if layer_index == 0:
-                x = np.array([Int('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = input_domain_constraint(df, x, ranges)
-                y = z3_layer1_ws_net(x, weight, bias)
-            elif (layer_index == 1):
-                x = np.array([Real('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = intermediate_domain_constraint(x, pl_lb, pl_ub, layer_index)
-                y = z3_layer2_ws_net(x, weight, bias)
-
-            elif (layer_index == 2):
-                x = np.array([Real('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = intermediate_domain_constraint(x, pl_lb, pl_ub, layer_index)
-                y = z3_layer3_ws_net(x, weight, bias)
-
-            elif (layer_index == 3):
-                x = np.array([Real('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = intermediate_domain_constraint(x, pl_lb, pl_ub, layer_index)
-                y = z3_layer4_ws_net(x, weight, bias)
-
-            elif (layer_index == 4):
-                x = np.array([Real('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = intermediate_domain_constraint(x, pl_lb, pl_ub, layer_index)
-                y = z3_layer5_ws_net(x, weight, bias)
-
-            elif (layer_index == 5):
-                x = np.array([Real('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = intermediate_domain_constraint(x, pl_lb, pl_ub, layer_index)
-                y = z3_layer6_ws_net(x, weight, bias)
-
-            elif (layer_index == 6):
-                x = np.array([Real('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = intermediate_domain_constraint(x, pl_lb, pl_ub, layer_index)
-                y = z3_layer7_ws_net(x, weight, bias)
-
-            elif (layer_index == 7):
-                x = np.array([Real('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = intermediate_domain_constraint(x, pl_lb, pl_ub, layer_index)
-                y = z3_layer8_ws_net(x, weight, bias)
-
-            elif (layer_index == 8):
-                x = np.array([Real('x%s' % i) for i in range(len(weight[layer_index]))])
-                in_props = intermediate_domain_constraint(x, pl_lb, pl_ub, layer_index)
-                y = z3_layer9_ws_net(x, weight, bias)
-
-            s = Solver()
-
-            for i in in_props:
-                s.add(i)
-            s.add(y[neuron_index] > 0)
-            res = s.check()
-
-            if res == unsat:
-                dead_node_mask[layer_index][neuron_index] = 1
-                candidates[layer_index][neuron_index] = 0
-            else:
-                # 计算类别选择性分数
-                selectivity_scores[layer_index][neuron_index] = calculate_selectivity_score(y[neuron_index])
-
-    return dead_node_mask, candidates, selectivity_scores / total_counts
-
-def calculate_selectivity_score(output):
-    return np.var(output)
-
 
 def singular_verification_german(cand, df, weight, bias, ranges, pl_lb, pl_ub):
     print('SINGULAR VERIFICATION')
@@ -629,12 +549,80 @@ def sound_prune_global(df, weight, bias, simulation_size, layer_net, range_dict)
 
     return pr_w, pr_b
 
+def prune_neurons_based_class_selectivity(train, w, b, layer_net, p, PAcol, range_dict):
+    aver_act = []
+    sen_act = []
+    act_bias = []
+
+    for i in range(len(p)):
+        for j in range(len(train)):
+            train_in = train[j]
+            delta_in = copy.deepcopy(train_in)
+            delta_in[i] = random.randint(range_dict[p[i]][0], range_dict[p[i]][1])
+            inp1 = np.array(train_in).astype(np.int32)
+            inp2 = np.array(delta_in).astype(np.int32)
+            layer1 = layer_net(inp1, w, b)
+            layer2 = layer_net(inp2, w, b)
+
+            if not aver_act:
+                for l in range(len(layer1)):
+                    aver_act.append([0] * len(layer1[l]))
+                    sen_act.append([0] * len(layer1[l]))
+                    act_bias.append([0] * len(layer1[l]))
+
+            if i not in PAcol:
+                for l in range(len(layer1) - 1):
+                    for k in range(len(layer1[l])):
+                        aver_act[l][k] += abs(layer1[l][k] - layer2[l][k])
+            else:
+                for l in range(len(layer1) - 1):
+                    for k in range(len(layer1[l])):
+                        sen_act[l][k] += abs(layer1[l][k] - layer2[l][k])
+
+    for i in range(len(aver_act)):
+        for j in range(len(aver_act[i])):
+            aver_act[i][j] /= (len(p) - len(PAcol))
+            sen_act[i][j] /= len(PAcol)
+            act_bias[i][j] = abs(aver_act[i][j] - sen_act[i][j])
+
+    return act_bias
+
+
+
+
+# inp1 complies with the assumed output while inp2 doesn't
+def sensitive_prune(inp1, inp2, weight, bias, layer_net):
+
+    print("Starting sensitive prune")
+    layers1 = layer_net(inp1, weight, bias)
+    layers2 = layer_net(inp2, weight, bias)
+
+    neuron_sensitivity = []
+    dead_nodes_mask = []
+    for l in layers1:
+        neuron_sensitivity.append([0] * len(l))
+        dead_nodes_mask.append([0] * len(l))
+
+    for i in range(len(layers1)):
+        for j in range(len(layers1[i])):
+            if layers1[i][j] == 0 and layers2[i][j] != 0:
+                dead_nodes_mask[i][j] = 1
+            else: dead_nodes_mask[i][j] = 0
+
+    for l in dead_nodes_mask:
+        if not 0 in l:
+            l[0] = 0
+    pr_w, pr_b = prune_neurons(weight, bias, dead_nodes_mask)
+    return pr_w, pr_b
+
+
 
 def sound_prune(df, weight, bias, simulation_size, layer_net, range_dict):
     label_name = 'income-per-year'
     #sim_data = sim_df.drop(labels = [label_name], axis=1, inplace=False)
     x_df = df.drop(labels=[label_name], axis=1, inplace=False)
     sim_df = simluate_data(x_df, simulation_size, range_dict)
+
 
     candidates, pos_prob = candidate_dead_nodes(sim_df.to_numpy(), weight, bias, layer_net)
     #    print('candi >>> ', candidates)

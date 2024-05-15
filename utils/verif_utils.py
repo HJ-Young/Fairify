@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd 
 from sklearn.metrics import accuracy_score,confusion_matrix,roc_auc_score
 from sklearn import metrics
+from sklearn.metrics import r2_score
 import collections
 import time
 import datetime
@@ -424,10 +425,6 @@ def get_layer_outputs(model, single_input):
     X = single_input.reshape(1, 42)
     layer_outs = [func([X]) for func in functors]
     return layer_outs
-
-def single_predict(single_input):
-    model.predict(X)
-    return (model.predict(X) > 0.5)
 
 def print_cols(dataframe):
     for col in dataframe:
@@ -861,6 +858,10 @@ def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
 
+def calculate_class_correlation(real_lable, pred_lable):
+    return r2_score(real_lable, pred_lable)
+
+
 def get_y_pred(net, w, b, X_test):
     y_all = []
     for x in X_test:
@@ -885,3 +886,8 @@ def y_pred_mismatch(net, w, b, pr_w, pr_b, X_test, y_test):
             print('MISMATCH')
             print(res)
             print(res_)
+
+def getThresholdValue(b, threshold):
+    arr = np.concatenate(np.array(b))
+    num = int(len(arr) * threshold) + 1
+    return np.partition(arr, -num)[-num]
