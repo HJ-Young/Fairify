@@ -19,7 +19,7 @@ single_input = X_test[0].reshape(1, 16)
 
 # In[]
 model_dir = '../../models/bank/'
-result_dir = './res-CS-2%/'
+result_dir = './res-L1-5%/'
 PARTITION_THRESHOLD = 100
 
 SOFT_TIMEOUT = 100
@@ -54,7 +54,7 @@ PA_col = [15]
 RA = []
 RA_threshold = 5
 
-PRUNE_THRESHOLD = 0.02
+PRUNE_THRESHOLD = 0.05
 
 sim_size = 1 * 1000
 
@@ -99,25 +99,25 @@ for model_file in model_files:
     act = [] #用于记录神经元激活值
     sen_deads_mask = []
     # Sensitive Pruning Based on L1
-    # for i in range(len(X_train)):
-    #     train_input = X_train[i]
-    #     delta_input = copy.deepcopy(train_input)
-    #     delta_input[15] = random.randint(range_dict['age'][0], range_dict['age'][1])
-    #     inp1 = np.array(train_input).astype(np.int32)
-    #     inp2 = np.array(delta_input).astype(np.int32)
-    #     test_output = y_train[i]
-    #     layer1 = layer_net(inp1, w, b)
-    #     layer2 = layer_net(inp2, w, b)
-    #     if not act:
-    #         for l in range(len(layer1)):
-    #             act.append([0] * len(layer1[l]))
-    #             sen_deads_mask.append([0] * len(layer1[l]))
-    #     for l in range(len(layer1) - 1):
-    #         for j in range(len(layer1[l])):
-    #             act[l][j] += abs(layer1[l][j] - layer2[l][j]) #计算不同敏感性造成的激活值偏差
+    for i in range(len(X_train)):
+        train_input = X_train[i]
+        delta_input = copy.deepcopy(train_input)
+        delta_input[15] = random.randint(range_dict['age'][0], range_dict['age'][1])
+        inp1 = np.array(train_input).astype(np.int32)
+        inp2 = np.array(delta_input).astype(np.int32)
+        test_output = y_train[i]
+        layer1 = layer_net(inp1, w, b)
+        layer2 = layer_net(inp2, w, b)
+        if not act:
+            for l in range(len(layer1)):
+                act.append([0] * len(layer1[l]))
+                sen_deads_mask.append([0] * len(layer1[l]))
+        for l in range(len(layer1) - 1):
+            for j in range(len(layer1[l])):
+                act[l][j] += abs(layer1[l][j] - layer2[l][j]) #计算不同敏感性造成的激活值偏差
 
-    act = prune_neurons_based_class_selectivity(X_train, w, b, layer_net, list(A) ,PA_col, range_dict)
-    sen_deads_mask = copy.deepcopy(act)
+    # act = prune_neurons_based_class_selectivity(X_train, w, b, layer_net, list(A) ,PA_col, range_dict)
+    # sen_deads_mask = copy.deepcopy(act)
 
     prune_threshold = getThresholdValue(act, PRUNE_THRESHOLD)
     for l in range(len(act)):

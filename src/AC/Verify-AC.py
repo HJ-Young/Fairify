@@ -144,7 +144,7 @@ for model_file in model_files:
         # In[]
     #    sd = s
         neuron_bounds, candidates, s_candidates, b_deads, s_deads, st_deads, pos_prob, sim_X_df  = \
-            sound_pSrune(df, w, b, simulation_size, layer_net, p)
+            sound_prune(df, w, b, simulation_size, layer_net, p)
 
         b_compression = compression_ratio(b_deads)
         s_compression = compression_ratio(s_deads)

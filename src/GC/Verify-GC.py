@@ -19,7 +19,7 @@ single_input = X_test[0].reshape(1, 20)
 
 # In[]
 model_dir = '../../models/german/'
-result_dir = './age-'
+result_dir = './res-CS-5%/'
 PARTITION_THRESHOLD = 100
 
 SOFT_TIMEOUT = 100 
@@ -52,7 +52,9 @@ range_dict['foreign_worker'] = [0, 1]
 range_dict['sex'] = [0, 1]
 
 A = range_dict.keys()
-PA = ['age']
+PA = ['age', 'sex']
+PA_col = [11, 19]
+PRUNE_THRESHOLD = 0.05
 
 RA = []
 RA_threshold = 100
@@ -68,7 +70,7 @@ shuffle(p_list)
 
 model_files = os.listdir(model_dir)
 for model_file in model_files:
-    if not model_file.endswith('.h5'):
+    if not model_file.endswith('.h5') or model_file == 'GC-3.h5':
         continue;
     print('==================  STARTING MODEL ' + model_file)
     model_name = model_file.split('.')[0]
@@ -94,7 +96,42 @@ for model_file in model_files:
     unsat_count = 0
     unk_count = 0
     cumulative_time = 0
-    
+
+    act = [] #用于记录神经元激活值
+    sen_deads_mask = []
+    # Sensitive Pruning Based on L1S
+    # for i in range(len(X_train)):
+    #     train_input = X_train[i]
+    #     delta_input = copy.deepcopy(train_input)
+    #     delta_input[11] = random.randint(range_dict['age'][0], range_dict['age'][1])
+    #     delta_input[19] = random.randint(range_dict['sex'][0], range_dict['sex'][1])
+    #     inp1 = np.array(train_input).astype(np.int32)
+    #     inp2 = np.array(delta_input).astype(np.int32)
+    #     test_output = y_train[i]
+    #     inp1_pred = get_y_pred(net, w, b, [train_input])
+    #     inp2_pred = get_y_pred(net, w, b, [delta_input])
+    #     layer1 = layer_net(inp1, w, b)
+    #     layer2 = layer_net(inp2, w, b)
+    #
+    #     if not act:
+    #         for l in range(len(layer1)):
+    #             act.append([0] * len(layer1[l]))
+    #             sen_deads_mask.append([0] * len(layer1[l]))
+    #     for l in range(len(layer1) - 1):
+    #         for j in range(len(layer1[l])):
+    #             act[l][j] += abs(layer1[l][j] - layer2[l][j]) #计算不同敏感性造成的激活值偏差
+
+    #Class Selectivity Prune
+    act = prune_neurons_based_class_selectivity(X_train, w, b, layer_net, list(A) ,PA_col, range_dict)
+    sen_deads_mask = copy.deepcopy(act)
+
+    prune_threshold = getThresholdValue(act, PRUNE_THRESHOLD)
+    for l in range(len(act)):
+        for j in range(len(act[l])):
+            if act[l][j] < prune_threshold: sen_deads_mask[l][j] = 0 #不需要删除
+            else: sen_deads_mask[l][j] = 1 #需要删除
+
+
     for p in p_list:
         heuristic_attempted = 0
         result = []
@@ -112,6 +149,12 @@ for model_file in model_files:
         b_compression = compression_ratio(b_deads)
         s_compression = compression_ratio(s_deads)
         st_compression = compression_ratio(st_deads)
+
+        st_deads = merge_dead_nodes(st_deads, sen_deads_mask)
+
+        for l in st_deads:
+            if not 0 in l:
+                l[0] = 0
     
         pr_w, pr_b = prune_neurons(w, b, st_deads)
         
@@ -273,7 +316,7 @@ for model_file in model_files:
         
        
         orig_acc = accuracy_score(y_test, get_y_pred(net, w, b, X_test))
-        pruned_acc = accuracy_score(sim_y_orig, sim_y)
+        pruned_acc = accuracy_score(y_test, get_y_pred(net, pr_w, pr_b, X_test))
 
         # In[]
         res_cols = ['Partition_ID', 'Verification', 'SAT_count', 'UNSAT_count', 'UNK_count', 'h_attempt', 'h_success', \
