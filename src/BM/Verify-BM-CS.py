@@ -19,7 +19,7 @@ single_input = X_test[0].reshape(1, 16)
 
 # In[]
 model_dir = '../../models/bank/'
-result_dir = './res-CS-5%/'
+result_dir = './res-CS-2%/'
 PARTITION_THRESHOLD = 100
 
 SOFT_TIMEOUT = 100
@@ -54,7 +54,7 @@ PA_col = [0]
 RA = []
 RA_threshold = 5
 
-PRUNE_THRESHOLD = 0.05
+PRUNE_THRESHOLD = 0.02
 
 sim_size = 1 * 1000
 
@@ -122,8 +122,8 @@ for model_file in model_files:
     prune_threshold = getThresholdValue(act, PRUNE_THRESHOLD)
     for l in range(len(act)):
         for j in range(len(act[l])):
-            if act[l][j] < prune_threshold and act[l][j] > 0 : sen_deads_mask[l][j] = 0 #不需要删除
-            else: sen_deads_mask[l][j] = 1 #需要删除
+            if act[l][j] >= prune_threshold and act[l][j] > 0 : sen_deads_mask[l][j] = 1 #需要删除
+            else: sen_deads_mask[l][j] = 0 #不需要删除
     
     for p in p_list:
         heuristic_attempted = 0

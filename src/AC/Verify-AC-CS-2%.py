@@ -128,9 +128,8 @@ for model_file in model_files:
     prune_threshold = getThresholdValue(act, PRUNE_THRESHOLD)
     for l in range(len(act)):
         for j in range(len(act[l])):
-            if act[l][j] < prune_threshold and act[l][j] > 0: sen_deads_mask[l][j] = 0 #不需要删除
-            else: sen_deads_mask[l][j] = 1 #需要删除
-
+            if act[l][j] >= prune_threshold and act[l][j] > 0 : sen_deads_mask[l][j] = 1 #需要删除
+            else: sen_deads_mask[l][j] = 0 #不需要删除
 
     for p in p_list:
         heuristic_attempted = 0

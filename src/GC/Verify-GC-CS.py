@@ -19,7 +19,7 @@ single_input = X_test[0].reshape(1, 20)
 
 # In[]
 model_dir = '../../models/german/'
-result_dir = './res-CS-5%/'
+result_dir = './res-CS-2%/'
 PARTITION_THRESHOLD = 100
 
 SOFT_TIMEOUT = 100 
@@ -54,7 +54,7 @@ range_dict['sex'] = [0, 1]
 A = range_dict.keys()
 PA = ['age', 'sex']
 PA_col = [11, 19]
-PRUNE_THRESHOLD = 0.05
+PRUNE_THRESHOLD = 0.02
 
 RA = []
 RA_threshold = 100
@@ -128,8 +128,8 @@ for model_file in model_files:
     prune_threshold = getThresholdValue(act, PRUNE_THRESHOLD)
     for l in range(len(act)):
         for j in range(len(act[l])):
-            if act[l][j] < prune_threshold and act[l][j] > 0: sen_deads_mask[l][j] = 0 #不需要删除
-            else: sen_deads_mask[l][j] = 1 #需要删除
+            if act[l][j] >= prune_threshold and act[l][j] > 0 : sen_deads_mask[l][j] = 1 #需要删除
+            else: sen_deads_mask[l][j] = 0 #不需要删除
 
 
     for p in p_list:
