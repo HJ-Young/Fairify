@@ -583,7 +583,7 @@ def prune_neurons_based_class_selectivity(train, w, b, layer_net, p, PAcol, rang
         for j in range(len(aver_act[i])):
             aver_act[i][j] /= (len(p) - len(PAcol))
             sen_act[i][j] /= len(PAcol)
-            act_bias[i][j] = abs(aver_act[i][j] - sen_act[i][j])
+            act_bias[i][j] = sen_act[i][j] - aver_act[i][j]
 
     return act_bias
 
